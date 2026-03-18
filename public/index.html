@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistem Manajemen Inventaris - Login untuk mengelola produk dan inventaris Anda">
+  <title>InvenTrack - Sistem Manajemen Inventaris</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-container">
+      <div class="auth-card">
+        <!-- Logo -->
+        <div class="auth-logo">
+          <div class="logo-icon">📦</div>
+          <h1>InvenTrack</h1>
+          <p>Sistem Manajemen Inventaris</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="loginTab" onclick="switchTab('login')">Masuk</button>
+          <button class="auth-tab" id="registerTab" onclick="switchTab('register')">Daftar</button>
+        </div>
+
+        <!-- Message -->
+        <div id="authMessage" class="form-message"></div>
+
+        <!-- Login Form -->
+        <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="loginEmail">Email</label>
+            <input type="email" class="form-input" id="loginEmail" placeholder="email@contoh.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Password</label>
+            <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password" required>
+          </div>
+          <button type="submit" class="btn btn-primary" id="loginBtn">
+            <span id="loginBtnText">Masuk</span>
+          </button>
+        </form>
+
+        <!-- Register Form -->
+        <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label class="form-label" for="registerName">Nama Lengkap</label>
+            <input type="text" class="form-input" id="registerName" placeholder="Masukkan nama lengkap" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="registerEmail">Email</label>
+            <input type="email" class="form-input" id="registerEmail" placeholder="email@contoh.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="registerPassword">Password</label>
+            <input type="password" class="form-input" id="registerPassword" placeholder="Min. 6 karakter" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="registerPasswordConfirm">Konfirmasi Password</label>
+            <input type="password" class="form-input" id="registerPasswordConfirm" placeholder="Ulangi password" required minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary" id="registerBtn">
+            <span id="registerBtnText">Daftar</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="/js/firebase-init.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

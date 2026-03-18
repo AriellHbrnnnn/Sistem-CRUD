@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Dashboard Sistem Manajemen Inventaris - Kelola produk dan inventaris secara real-time">
+  <title>Dashboard - InvenTrack</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <p class="loading-text">Memuat dashboard...</p>
+  </div>
+
+  <div class="dashboard" id="dashboardApp" style="display:none;">
+    <!-- Sidebar Overlay (Mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="brand-icon">📦</div>
+          <div>
+            <h2>InvenTrack</h2>
+            <span>Inventory System</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <!-- Dashboard -->
+        <div class="nav-section">
+          <p class="nav-section-title">Menu Utama</p>
+          <button class="nav-item active" onclick="showSection('overview')" data-section="overview">
+            <span class="nav-icon">📊</span>
+            Dashboard
+          </button>
+        </div>
+
+        <!-- Inventory Dropdown -->
+        <div class="nav-section">
+          <p class="nav-section-title">Manajemen</p>
+          <div class="nav-dropdown">
+            <button class="nav-item nav-dropdown-toggle" onclick="toggleDropdown(this)">
+              <span class="nav-icon">📦</span>
+              Inventaris
+              <span class="dropdown-arrow">▾</span>
+            </button>
+            <div class="nav-dropdown-menu">
+              <button class="nav-sub-item" onclick="showSection('products')" data-section="products">
+                <span class="sub-dot"></span> Semua Produk
+              </button>
+              <button class="nav-sub-item" onclick="showSection('stock')" data-section="stock">
+                <span class="sub-dot"></span> Stok Barang
+              </button>
+              <button class="nav-sub-item" onclick="showSection('categories')" data-section="categories">
+                <span class="sub-dot"></span> Kategori
+              </button>
+            </div>
+          </div>
+
+          <!-- Sales Dropdown -->
+          <div class="nav-dropdown">
+            <button class="nav-item nav-dropdown-toggle" onclick="toggleDropdown(this)">
+              <span class="nav-icon">💰</span>
+              Sales
+              <span class="dropdown-arrow">▾</span>
+            </button>
+            <div class="nav-dropdown-menu">
+              <button class="nav-sub-item" onclick="showSection('sales-orders')" data-section="sales-orders">
+                <span class="sub-dot"></span> Pesanan
+              </button>
+              <button class="nav-sub-item" onclick="showSection('invoices')" data-section="invoices">
+                <span class="sub-dot"></span> Invoice
+              </button>
+            </div>
+          </div>
+
+          <!-- Purchases Dropdown -->
+          <div class="nav-dropdown">
+            <button class="nav-item nav-dropdown-toggle" onclick="toggleDropdown(this)">
+              <span class="nav-icon">🛒</span>
+              Purchases
+              <span class="dropdown-arrow">▾</span>
+            </button>
+            <div class="nav-dropdown-menu">
+              <button class="nav-sub-item" onclick="showSection('purchase-orders')" data-section="purchase-orders">
+                <span class="sub-dot"></span> Purchase Order
+              </button>
+              <button class="nav-sub-item" onclick="showSection('suppliers')" data-section="suppliers">
+                <span class="sub-dot"></span> Supplier
+              </button>
+              <button class="nav-sub-item" onclick="showSection('bills')" data-section="bills">
+                <span class="sub-dot"></span> Tagihan
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Single Menu Items -->
+        <div class="nav-section">
+          <p class="nav-section-title">Lainnya</p>
+          <button class="nav-item" onclick="showSection('reports')" data-section="reports">
+            <span class="nav-icon">📈</span>
+            Reports
+          </button>
+          <button class="nav-item" onclick="showSection('documents')" data-section="documents">
+            <span class="nav-icon">📄</span>
+            Documents
+          </button>
+          <button class="nav-item" onclick="showSection('integrations')" data-section="integrations">
+            <span class="nav-icon">🔗</span>
+            Integrations
+          </button>
+          <button class="nav-item" onclick="showSection('channels')" data-section="channels">
+            <span class="nav-icon">📡</span>
+            Active Channels
+          </button>
+        </div>
+
+        <!-- Admin Section -->
+        <div class="nav-section admin-only">
+          <p class="nav-section-title">Admin</p>
+          <button class="nav-item" onclick="showSection('users')" data-section="users">
+            <span class="nav-icon">👥</span>
+            Kelola User
+          </button>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">U</div>
+          <div class="user-details">
+            <div class="user-name" id="userName">Loading...</div>
+            <div class="user-role" id="userRoleBadge">user</div>
+          </div>
+        </div>
+        <button class="btn-logout" onclick="handleLogout()">
+          🚪 Keluar
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+          <div>
+            <h1 class="page-title" id="pageTitle">Dashboard</h1>
+            <p class="page-subtitle" id="pageSubtitle">Selamat datang kembali</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="header-search">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="Cari produk..." id="globalSearch" oninput="handleSearch(this.value)">
+          </div>
+        </div>
+      </header>
+
+      <div class="content">
+
+        <!-- ========== OVERVIEW / DASHBOARD ========== -->
+        <section class="page-section active" id="sectionOverview">
+          <!-- Stats Cards -->
+          <div class="stats-grid">
+            <div class="stat-card purple">
+              <div class="stat-header">
+                <div class="stat-icon">📦</div>
+                <span class="stat-label">Total Produk</span>
+              </div>
+              <div class="stat-value" id="statTotal">0</div>
+              <div class="stat-change">Semua produk terdaftar</div>
+            </div>
+            <div class="stat-card orange">
+              <div class="stat-header">
+                <div class="stat-icon">⚠️</div>
+                <span class="stat-label">Stok Rendah</span>
+              </div>
+              <div class="stat-value" id="statLowStock">0</div>
+              <div class="stat-change">Stok di bawah 10 unit</div>
+            </div>
+            <div class="stat-card blue">
+              <div class="stat-header">
+                <div class="stat-icon">📂</div>
+                <span class="stat-label">Kategori</span>
+              </div>
+              <div class="stat-value" id="statCategories">0</div>
+              <div class="stat-change">Kategori produk aktif</div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-header">
+                <div class="stat-icon">💰</div>
+                <span class="stat-label">Total Revenue</span>
+              </div>
+              <div class="stat-value" id="statValue">Rp 0</div>
+              <div class="stat-change">Total penjualan keseluruhan</div>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="charts-grid">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title">📈 Tren Penjualan (6 Bulan)</h3>
+                <select class="filter-select" id="salesChartFilter" onchange="updateSalesChart()">
+                  <option value="6">6 Bulan</option>
+                  <option value="12">12 Bulan</option>
+                </select>
+              </div>
+              <div class="chart-body">
+                <canvas id="salesChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title">🍩 Distribusi Kategori</h3>
+              </div>
+              <div class="chart-body chart-body-sm">
+                <canvas id="categoryChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Second Charts Row -->
+          <div class="charts-grid mt-2">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title">📊 Pendapatan vs Pengeluaran</h3>
+              </div>
+              <div class="chart-body">
+                <canvas id="revenueChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title">📦 Top 5 Produk (Stok)</h3>
+              </div>
+              <div class="chart-body">
+                <canvas id="stockChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Products Table -->
+          <div class="table-container mt-2">
+            <div class="table-header">
+              <h3 class="table-title">📋 Produk Terbaru</h3>
+              <div class="table-actions admin-only">
+                <button class="btn btn-primary btn-sm" onclick="openProductModal()">
+                  ➕ Tambah Produk
+                </button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="recentProductsTable">
+                <thead>
+                  <tr>
+                    <th>Produk</th>
+                    <th>Kategori</th>
+                    <th>Harga</th>
+                    <th>Stok</th>
+                    <th>Status</th>
+                    <th class="admin-only">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="recentProductsBody">
+                  <tr><td colspan="6"><div class="table-empty"><div class="empty-icon">📭</div><h3>Belum ada produk</h3><p>Mulai tambahkan produk ke inventaris Anda</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== PRODUCTS SECTION ========== -->
+        <section class="page-section" id="sectionProducts">
+          <div class="table-container">
+            <div class="table-header">
+              <h3 class="table-title">📋 Semua Produk</h3>
+              <div class="table-actions">
+                <select class="filter-select" id="categoryFilter" onchange="filterProducts()">
+                  <option value="all">Semua Kategori</option>
+                </select>
+                <button class="btn btn-primary btn-sm admin-only" onclick="openProductModal()">➕ Tambah Produk</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stok</th><th>Satuan</th><th>Status</th><th class="admin-only">Aksi</th></tr>
+                </thead>
+                <tbody id="allProductsBody">
+                  <tr><td colspan="7"><div class="table-empty"><div class="empty-icon">📭</div><h3>Belum ada produk</h3><p>Mulai tambahkan produk ke inventaris Anda</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== STOCK SECTION ========== -->
+        <section class="page-section" id="sectionStock">
+          <div class="stats-grid">
+            <div class="stat-card green"><div class="stat-header"><div class="stat-icon">✅</div><span class="stat-label">Stok Cukup</span></div><div class="stat-value" id="stockAdequate">0</div><div class="stat-change">Stok &gt; 10 unit</div></div>
+            <div class="stat-card orange"><div class="stat-header"><div class="stat-icon">⚠️</div><span class="stat-label">Stok Rendah</span></div><div class="stat-value" id="stockLow">0</div><div class="stat-change">Stok 1-10 unit</div></div>
+            <div class="stat-card purple"><div class="stat-header"><div class="stat-icon">❌</div><span class="stat-label">Habis</span></div><div class="stat-value" id="stockEmpty">0</div><div class="stat-change">Stok 0 unit</div></div>
+          </div>
+          <div class="chart-card mt-2">
+            <div class="chart-header"><h3 class="chart-title">📊 Distribusi Level Stok</h3></div>
+            <div class="chart-body"><canvas id="stockLevelChart"></canvas></div>
+          </div>
+          <div class="table-container mt-2">
+            <div class="table-header"><h3 class="table-title">📦 Detail Stok Barang</h3></div>
+            <div class="table-responsive">
+              <table class="data-table"><thead><tr><th>Produk</th><th>SKU</th><th>Stok</th><th>Satuan</th><th>Nilai</th><th>Status</th></tr></thead>
+                <tbody id="stockTableBody"><tr><td colspan="6"><div class="table-empty"><div class="empty-icon">📭</div><h3>Belum ada data stok</h3></div></td></tr></tbody></table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== CATEGORIES SECTION ========== -->
+        <section class="page-section" id="sectionCategories">
+          <div class="chart-card">
+            <div class="chart-header"><h3 class="chart-title">🍩 Produk per Kategori</h3></div>
+            <div class="chart-body chart-body-sm"><canvas id="categoriesPageChart"></canvas></div>
+          </div>
+          <div class="categories-grid mt-2" id="categoriesGrid">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- ========== SALES ORDERS SECTION ========== -->
+        <section class="page-section" id="sectionSalesOrders">
+          <div class="stats-grid">
+            <div class="stat-card green"><div class="stat-header"><div class="stat-icon">✅</div><span class="stat-label">Selesai</span></div><div class="stat-value" id="salesStatCompleted">0</div><div class="stat-change">Pesanan bulan ini</div></div>
+            <div class="stat-card blue"><div class="stat-header"><div class="stat-icon">🔄</div><span class="stat-label">Diproses</span></div><div class="stat-value" id="salesStatProcessing">0</div><div class="stat-change">Sedang diproses</div></div>
+            <div class="stat-card orange"><div class="stat-header"><div class="stat-icon">⏳</div><span class="stat-label">Pending</span></div><div class="stat-value" id="salesStatPending">0</div><div class="stat-change">Menunggu konfirmasi</div></div>
+            <div class="stat-card purple"><div class="stat-header"><div class="stat-icon">💰</div><span class="stat-label">Total Sales</span></div><div class="stat-value" id="salesStatTotal">Rp 0</div><div class="stat-change">Bulan ini</div></div>
+          </div>
+          <div class="table-container mt-2">
+            <div class="table-header">
+              <h3 class="table-title">💰 Daftar Pesanan</h3>
+              <div class="table-actions admin-only"><button class="btn btn-primary btn-sm" onclick="openSalesModal()">➕ Buat Pesanan</button></div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table"><thead><tr><th>No. Order</th><th>Produk</th><th>Tanggal</th><th>Total</th><th>Status</th><th class="admin-only">Aksi</th></tr></thead>
+                <tbody id="salesOrdersBody"></tbody></table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== INVOICES SECTION ========== -->
+        <section class="page-section" id="sectionInvoices">
+          <div class="stats-grid">
+            <div class="stat-card green"><div class="stat-header"><div class="stat-icon">✅</div><span class="stat-label">Lunas</span></div><div class="stat-value">18</div><div class="stat-change">Invoice terbayar</div></div>
+            <div class="stat-card orange"><div class="stat-header"><div class="stat-icon">⏳</div><span class="stat-label">Belum Bayar</span></div><div class="stat-value">5</div><div class="stat-change">Menunggu pembayaran</div></div>
+            <div class="stat-card purple"><div class="stat-header"><div class="stat-icon">💳</div><span class="stat-label">Total Invoice</span></div><div class="stat-value">Rp 38.7Jt</div><div class="stat-change">Bulan ini</div></div>
+          </div>
+          <div class="table-container mt-2">
+            <div class="table-header"><h3 class="table-title">🧾 Daftar Invoice</h3>
+              <div class="table-actions admin-only"><button class="btn btn-primary btn-sm" onclick="showToast('Info','Fitur dalam pengembangan','info')">➕ Buat Invoice</button></div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table"><thead><tr><th>No. Invoice</th><th>Produk</th><th>Tanggal</th><th>Jatuh Tempo</th><th>Total</th><th>Status</th><th class="admin-only">Aksi</th></tr></thead>
+                <tbody id="invoicesBody"></tbody></table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========== PURCHASE ORDERS SECTION ========== -->
+        <section class="page-section" id="sectionPurchaseOrders">
+          <div class="stats-grid">
+            <div class="stat-card blue"><div class="stat-header"><div class="stat-icon">📋</div><span class="stat-label">Total PO</span></div><div class="stat-value" id="poStatTotal">0</div><div class="stat-change">Bulan ini</div></div>
+            <div class="stat-card green"><div class="stat-header"><div class="stat-icon">✅</div><span class="stat-label">Diterima</span></div><div class="stat-value" id="poStatReceived">0</div><div class="stat-change">Barang diterima</div></div>
+            <div class="stat-card orange"><div class="stat-header"><div class="stat-icon">🚚</div><span class="stat-label">Dalam Pengiriman</span></div><div class="stat-value" id="poStatShipped">0</div><div class="stat-change">Sedang dikirim</div></div>
+            <div class="stat-card purple"><div class="stat-header"><div class="stat-icon">💸</div><span class="stat-label">Total Pembelian</span></div><div class="stat-value" id="poStatValue">Rp 0</div><div class="stat-change">Bulan ini</div></div>
+          </div>
+          <div class="table-container mt-2">
+            <div class="table-header"><h3 class="table-title">🛒 Daftar Purchase Order</h3>
+              <div class="table-actions admin-only"><button class="btn btn-primary btn-sm" onclick="openPurchaseModal()">➕ Buat PO</button></div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table"><thead><tr><th>No. PO</th><th>Supplier</th><th>Tanggal</th><th>Total</th><th>Status</th></tr></thead>
+                <tbody id="purchaseOrdersBody"></tbody></table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== SUPPLIERS SECTION ========== -->
+        <section class="page-section" id="sectionSuppliers">
+          <div class="table-container">
+            <div class="table-header"><h3 class="table-title">🏭 Daftar Supplier</h3>
+              <div class="table-actions admin-only"><button class="btn btn-primary btn-sm" onclick="openSupplierModal()">➕ Tambah Supplier</button></div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table"><thead><tr><th>Nama Supplier</th><th>Kontak</th><th>Email</th><th>Alamat</th><th>Total PO</th></tr></thead>
+                <tbody id="suppliersBody"></tbody></table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== BILLS SECTION ========== -->
+        <section class="page-section" id="sectionBills">
+          <div class="table-container">
+            <div class="table-header"><h3 class="table-title">🧾 Tagihan Pembelian</h3></div>
+            <div class="table-responsive">
+              <table class="data-table"><thead><tr><th>No. Tagihan</th><th>Supplier</th><th>Tanggal</th><th>Jatuh Tempo</th><th>Total</th><th>Status</th></tr></thead>
+                <tbody id="billsBody"></tbody></table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== REPORTS SECTION ========== -->
+        <section class="page-section" id="sectionReports">
+          <div class="charts-grid">
+            <div class="chart-card">
+              <div class="chart-header"><h3 class="chart-title">📈 Laporan Penjualan Bulanan</h3></div>
+              <div class="chart-body"><canvas id="reportSalesChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header"><h3 class="chart-title">📊 Laporan Pembelian Bulanan</h3></div>
+              <div class="chart-body"><canvas id="reportPurchaseChart"></canvas></div>
+            </div>
+          </div>
+          <div class="charts-grid mt-2">
+            <div class="chart-card">
+              <div class="chart-header"><h3 class="chart-title">💹 Profit & Loss</h3></div>
+              <div class="chart-body"><canvas id="reportProfitChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header"><h3 class="chart-title">📦 Pergerakan Stok</h3></div>
+              <div class="chart-body"><canvas id="reportStockChart"></canvas></div>
+            </div>
+          </div>
+          <div class="report-cards mt-2" id="reportCardsGrid">
+            <div class="feature-card">
+              <div class="feature-icon">📊</div>
+              <h4>Laporan Keuangan</h4>
+              <p>Ringkasan pendapatan, pengeluaran, dan laba rugi</p>
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Info','Sedang menyiapkan laporan...','info')">📥 Download PDF</button>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">📋</div>
+              <h4>Laporan Inventaris</h4>
+              <p>Detail stok, nilai inventaris, dan produk terlaris</p>
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Info','Sedang menyiapkan laporan...','info')">📥 Download Excel</button>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">📈</div>
+              <h4>Laporan Penjualan</h4>
+              <p>Analisis tren penjualan dan performa produk</p>
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Info','Sedang menyiapkan laporan...','info')">📥 Download PDF</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== DOCUMENTS SECTION ========== -->
+        <section class="page-section" id="sectionDocuments">
+          <div class="table-container">
+            <div class="table-header"><h3 class="table-title">📄 Dokumen</h3>
+              <div class="table-actions admin-only"><button class="btn btn-primary btn-sm" onclick="openDocumentModal()">➕ Upload Dokumen</button></div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table"><thead><tr><th>Nama File</th><th>Tipe</th><th>Ukuran</th><th>Diunggah Oleh</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+                <tbody id="documentsBody"></tbody></table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== INTEGRATIONS SECTION ========== -->
+        <section class="page-section" id="sectionIntegrations">
+          <div class="section-intro">
+            <h2>🔗 Integrasi</h2>
+            <p>Hubungkan InvenTrack dengan layanan dan platform lainnya</p>
+          </div>
+          <div class="integrations-grid" id="integrationsGrid">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- ========== ACTIVE CHANNELS SECTION ========== -->
+        <section class="page-section" id="sectionChannels">
+          <div class="section-intro">
+            <h2>📡 Active Channels</h2>
+            <p>Kelola channel penjualan dan marketplace yang terhubung</p>
+          </div>
+          <div class="channels-grid" id="channelsGrid">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- ========== USERS SECTION (Admin Only) ========== -->
+        <section class="page-section" id="sectionUsers">
+          <div class="table-container">
+            <div class="table-header"><h3 class="table-title">👥 Manajemen User</h3></div>
+            <div id="usersContainer" class="users-grid" style="padding: 1.25rem;">
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Product Modal -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="productModalTitle">Tambah Produk Baru</h3>
+        <button class="modal-close" onclick="closeProductModal()">✕</button>
+      </div>
+      <form id="productForm" onsubmit="handleProductSubmit(event)">
+        <div class="modal-body">
+          <input type="hidden" id="productId">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label" for="productName">Nama Produk *</label><input type="text" class="form-input" id="productName" placeholder="Nama produk" required></div>
+            <div class="form-group"><label class="form-label" for="productSku">SKU *</label><input type="text" class="form-input" id="productSku" placeholder="SKU-001" required></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label" for="productCategory">Kategori *</label>
+              <select class="form-input" id="productCategory" required>
+                <option value="">Pilih Kategori</option><option value="Elektronik">Elektronik</option><option value="Pakaian">Pakaian</option><option value="Makanan & Minuman">Makanan & Minuman</option><option value="Peralatan">Peralatan</option><option value="Kesehatan">Kesehatan</option><option value="Otomotif">Otomotif</option><option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label" for="productUnit">Satuan</label>
+              <select class="form-input" id="productUnit"><option value="pcs">Pcs</option><option value="kg">Kg</option><option value="liter">Liter</option><option value="box">Box</option><option value="pack">Pack</option><option value="lusin">Lusin</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label" for="productPrice">Harga (Rp) *</label><input type="number" class="form-input" id="productPrice" placeholder="0" min="0" required></div>
+            <div class="form-group"><label class="form-label" for="productStock">Stok *</label><input type="number" class="form-input" id="productStock" placeholder="0" min="0" required></div>
+          </div>
+          <div class="form-group full-width"><label class="form-label" for="productDescription">Deskripsi</label><textarea class="form-input" id="productDescription" placeholder="Deskripsi produk (opsional)" rows="3"></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeProductModal()">Batal</button>
+          <button type="submit" class="btn btn-primary" id="productSubmitBtn"><span id="productSubmitText">Simpan Produk</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sales Order Modal -->
+  <div class="modal-overlay" id="salesModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="salesModalTitle">Buat Pesanan Baru</h3>
+        <button class="modal-close" onclick="closeSalesModal()">✕</button>
+      </div>
+      <form id="salesForm" onsubmit="handleSalesSubmit(event)">
+        <div class="modal-body">
+          <input type="hidden" id="salesId">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Nomor Order *</label><input type="text" class="form-input" id="salesNumber" placeholder="SO-2026-..." required></div>
+            <div class="form-group"><label class="form-label">Produk *</label>
+              <select class="form-input select2-product" id="salesProduct" required style="width: 100%;"><option value="">Pilih Produk</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Jumlah (Qty) *</label><input type="number" class="form-input" id="salesQty" placeholder="1" min="1" value="1" required oninput="calculateSalesTotal()"></div>
+            <div class="form-group"><label class="form-label">Total (Rp) *</label><input type="number" class="form-input" id="salesTotal" placeholder="0" min="0" required readonly></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group full-width"><label class="form-label">Status</label>
+              <select class="form-input" id="salesStatus"><option value="pending">Pending</option><option value="processing">Diproses</option><option value="completed">Selesai</option></select>
+            </div>
+          </div>
+          <div class="form-group full-width"><label class="form-label">Catatan</label><textarea class="form-input" id="salesNotes" placeholder="Catatan pesanan" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeSalesModal()">Batal</button>
+        <button type="submit" class="btn btn-primary" id="salesSubmitBtn">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- Purchase Order Modal -->
+  <div class="modal-overlay" id="purchaseModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="purchaseModalTitle">Buat PO Baru</h3>
+        <button class="modal-close" onclick="closePurchaseModal()">✕</button>
+      </div>
+      <form id="purchaseForm" onsubmit="handlePurchaseSubmit(event)">
+        <div class="modal-body">
+          <input type="hidden" id="purchaseId">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Nomor PO *</label><input type="text" class="form-input" id="purchaseNumber" placeholder="PO-2026-..." required></div>
+            <div class="form-group"><label class="form-label">Supplier *</label>
+              <select class="form-input" id="purchaseSupplier" required><option value="">Pilih Supplier</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Produk *</label>
+              <select class="form-input" id="purchaseProduct" required onchange="calculatePurchaseTotal()"><option value="">Pilih Produk</option></select>
+            </div>
+            <div class="form-group"><label class="form-label">Jumlah (Qty) *</label><input type="number" class="form-input" id="purchaseQty" placeholder="1" min="1" value="1" required oninput="calculatePurchaseTotal()"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Total (Rp) *</label><input type="number" class="form-input" id="purchaseTotal" placeholder="0" min="0" required readonly></div>
+            <div class="form-group"><label class="form-label">Status</label>
+              <select class="form-input" id="purchaseStatus"><option value="pending">Menunggu</option><option value="shipped">Dikirim</option><option value="received">Diterima</option></select>
+            </div>
+          </div>
+          <div class="form-group full-width"><label class="form-label">Catatan</label><textarea class="form-input" id="purchaseNotes" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closePurchaseModal()">Batal</button>
+        <button type="submit" class="btn btn-primary" id="purchaseSubmitBtn">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Supplier Modal -->
+  <div class="modal-overlay" id="supplierModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="supplierModalTitle">Tambah Supplier Baru</h3>
+        <button class="modal-close" onclick="closeSupplierModal()">✕</button>
+      </div>
+      <form id="supplierForm" onsubmit="handleSupplierSubmit(event)">
+        <div class="modal-body">
+          <input type="hidden" id="supplierId">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Nama Supplier *</label><input type="text" class="form-input" id="supplierName" required></div>
+            <div class="form-group"><label class="form-label">Kontak Person</label><input type="text" class="form-input" id="supplierContact"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="supplierEmail"></div>
+            <div class="form-group"><label class="form-label">Telepon</label><input type="text" class="form-input" id="supplierPhone"></div>
+          </div>
+          <div class="form-group full-width"><label class="form-label">Alamat</label><textarea class="form-input" id="supplierAddress" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeSupplierModal()">Batal</button>
+        <button type="submit" class="btn btn-primary" id="supplierSubmitBtn">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Status Modal -->
+  <div class="modal-overlay" id="editStatusModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Ubah Status Pesanan</h3>
+        <button class="modal-close" onclick="closeEditStatusModal()">✕</button>
+      </div>
+      <form id="editStatusForm" onsubmit="handleEditStatusSubmit(event)">
+        <div class="modal-body">
+          <input type="hidden" id="editStatusOrderId">
+          <div class="form-group full-width">
+            <label class="form-label">Status Baru *</label>
+            <select class="form-input" id="editStatusSelect" required>
+              <option value="pending">Pending</option>
+              <option value="processing">Diproses</option>
+              <option value="completed">Selesai</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeEditStatusModal()">Batal</button>
+          <button type="submit" class="btn btn-primary" id="editStatusSubmitBtn">Simpan Status</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Purchase Status Modal -->
+  <div class="modal-overlay" id="editPurchaseStatusModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Ubah Status PO</h3>
+        <button class="modal-close" onclick="closeEditPurchaseStatusModal()">✕</button>
+      </div>
+      <form id="editPurchaseStatusForm" onsubmit="handleEditPurchaseStatusSubmit(event)">
+        <div class="modal-body">
+          <input type="hidden" id="editPurchaseStatusOrderId">
+          <div class="form-group full-width">
+            <label class="form-label">Status Baru *</label>
+            <select class="form-input" id="editPurchaseStatusSelect" required>
+              <option value="pending">Menunggu (Pending)</option>
+              <option value="shipped">Dikirim (Shipped)</option>
+              <option value="received">Diterima (Selesai)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeEditPurchaseStatusModal()">Batal</button>
+          <button type="submit" class="btn btn-primary" id="editPurchaseStatusSubmitBtn">Simpan Status</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Document Upload Modal -->
+  <div class="modal-overlay" id="documentModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Upload Dokumen</h3>
+        <button class="modal-close" onclick="closeDocumentModal()">✕</button>
+      </div>
+      <form id="documentForm" onsubmit="handleDocumentSubmit(event)">
+        <div class="modal-body">
+          <div class="form-group full-width">
+            <label class="form-label" for="documentFile">Pilih File *</label>
+            <input type="file" class="form-input" id="documentFile" required>
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label" for="documentNameDisplay">Nama Dokumen (Opsional)</label>
+            <input type="text" class="form-input" id="documentNameDisplay" placeholder="Nama tampilan dokumen">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeDocumentModal()">Batal</button>
+          <button type="submit" class="btn btn-primary" id="documentSubmitBtn">Upload</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-body">
+        <div class="confirm-dialog">
+          <div class="confirm-icon">⚠️</div>
+          <h3 class="confirm-title" id="confirmDialogTitle">Hapus Item?</h3>
+          <p class="confirm-message" id="confirmMessage">Apakah Anda yakin ingin menghapus item ini?</p>
+          <div class="confirm-actions">
+            <button class="btn btn-secondary" onclick="closeConfirmModal()">Batal</button>
+            <button class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDelete()">Hapus</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="/js/firebase-init.js"></script>
+  <script src="/js/api.js?v=1.1"></script>
+  <script src="/js/dashboard.js?v=1.1"></script>
+</body>
+</html>
