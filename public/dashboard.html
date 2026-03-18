@@ -313,16 +313,21 @@
         <!-- ========== STOCK SECTION ========== -->
         <section class="page-section" id="sectionStock">
           <div class="stats-grid">
-            <div class="stat-card green"><div class="stat-header"><div class="stat-icon">✅</div><span class="stat-label">Stok Cukup</span></div><div class="stat-value" id="stockAdequate">0</div><div class="stat-change">Stok &gt; 10 unit</div></div>
-            <div class="stat-card orange"><div class="stat-header"><div class="stat-icon">⚠️</div><span class="stat-label">Stok Rendah</span></div><div class="stat-value" id="stockLow">0</div><div class="stat-change">Stok 1-10 unit</div></div>
-            <div class="stat-card purple"><div class="stat-header"><div class="stat-icon">❌</div><span class="stat-label">Habis</span></div><div class="stat-value" id="stockEmpty">0</div><div class="stat-change">Stok 0 unit</div></div>
+            <div class="stat-card green clickable" onclick="filterStockTable('adequate')"><div class="stat-header"><div class="stat-icon">✅</div><span class="stat-label">Stok Cukup</span></div><div class="stat-value" id="stockAdequate">0</div><div class="stat-change">Stok &gt; 10 unit</div></div>
+            <div class="stat-card orange clickable" onclick="filterStockTable('low')"><div class="stat-header"><div class="stat-icon">⚠️</div><span class="stat-label">Stok Rendah</span></div><div class="stat-value" id="stockLow">0</div><div class="stat-change">Stok 1-10 unit</div></div>
+            <div class="stat-card purple clickable" onclick="filterStockTable('empty')"><div class="stat-header"><div class="stat-icon">❌</div><span class="stat-label">Habis</span></div><div class="stat-value" id="stockEmpty">0</div><div class="stat-change">Stok 0 unit</div></div>
           </div>
           <div class="chart-card mt-2">
             <div class="chart-header"><h3 class="chart-title">📊 Distribusi Level Stok</h3></div>
             <div class="chart-body"><canvas id="stockLevelChart"></canvas></div>
           </div>
           <div class="table-container mt-2">
-            <div class="table-header"><h3 class="table-title">📦 Detail Stok Barang</h3></div>
+            <div class="table-header">
+              <h3 class="table-title" id="stockTableTitle">📦 Detail Stok Barang</h3>
+              <div class="table-actions">
+                <button class="btn btn-secondary btn-sm" id="btnResetStockFilter" onclick="filterStockTable('all')" style="display:none;">🔄 Tampilkan Semua</button>
+              </div>
+            </div>
             <div class="table-responsive">
               <table class="data-table"><thead><tr><th>Produk</th><th>SKU</th><th>Stok</th><th>Satuan</th><th>Nilai</th><th>Status</th></tr></thead>
                 <tbody id="stockTableBody"><tr><td colspan="6"><div class="table-empty"><div class="empty-icon">📭</div><h3>Belum ada data stok</h3></div></td></tr></tbody></table>

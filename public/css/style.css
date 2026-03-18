@@ -741,6 +741,16 @@ body {
   overflow: hidden;
 }
 
+.stat-card.clickable {
+  cursor: pointer;
+}
+
+.stat-card.clickable:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-primary);
+}
+
 .stat-card::before {
   content: '';
   position: absolute;

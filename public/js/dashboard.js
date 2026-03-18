@@ -19,6 +19,7 @@ let deleteTargetId = null;
 let deleteTargetCollection = null; // products, salesOrders, customers, etc.
 let firestoreUnsubscribes = {};
 let chartInstances = {};
+let currentStockFilter = 'all';
 
 // ============ INITIALIZATION ============
 
@@ -165,12 +166,13 @@ function setupRealtimeListeners() {
     allProducts.forEach(p => { if ((p.stock || 0) <= 10) lowStock++; if (p.category) categories.add(p.category); });
     updateStats({ totalProducts: allProducts.length, lowStock, totalCategories: categories.size });
     updateCategoryFilter(); updateDashboardCharts();
+    if (document.getElementById('sectionStock').classList.contains('active')) renderStockSection();
   });
 
   // Sales Orders
   firestoreUnsubscribes.salesOrders = firebaseDb.collection('salesOrders').orderBy('createdAt', 'desc').onSnapshot(snap => {
     allSalesOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
+
     // Hitung total sales real-time untuk dashboard utama
     let totalAllTimeSales = 0;
     allSalesOrders.forEach(o => {
@@ -180,7 +182,7 @@ function setupRealtimeListeners() {
       }
     });
     document.getElementById('statValue').textContent = formatRupiah(totalAllTimeSales);
-    
+
     renderSalesOrders(); updateSalesChart(); updateReportSalesChart();
   });
 
@@ -272,24 +274,64 @@ function getCategoryEmoji(category) {
 
 function renderStockSection() {
   let adequate = 0, low = 0, empty = 0;
-  allProducts.forEach(p => { if (p.stock <= 0) empty++; else if (p.stock <= 10) low++; else adequate++; });
-  document.getElementById('stockAdequate').textContent = adequate;
-  document.getElementById('stockLow').textContent = low;
-  document.getElementById('stockEmpty').textContent = empty;
+  allProducts.forEach(p => {
+    if ((p.stock || 0) <= 0) empty++;
+    else if ((p.stock || 0) <= 10) low++;
+    else adequate++;
+  });
+
+  const elAdequate = document.getElementById('stockAdequate');
+  const elLow = document.getElementById('stockLow');
+  const elEmpty = document.getElementById('stockEmpty');
+
+  if (elAdequate) elAdequate.textContent = adequate;
+  if (elLow) elLow.textContent = low;
+  if (elEmpty) elEmpty.textContent = empty;
 
   if (chartInstances.stockLevel) {
-    chartInstances.stockLevel.data.labels = allProducts.map(p => p.name.length > 12 ? p.name.substring(0, 12) + '...' : p.name);
-    chartInstances.stockLevel.data.datasets[0].data = allProducts.map(p => p.stock);
-    chartInstances.stockLevel.data.datasets[0].backgroundColor = allProducts.map(p => p.stock <= 0 ? 'rgba(255,71,87,0.7)' : p.stock <= 10 ? 'rgba(255,170,0,0.7)' : 'rgba(0,214,143,0.7)');
+    chartInstances.stockLevel.data.datasets[0].data = [adequate, low, empty];
     chartInstances.stockLevel.update();
   }
 
   const tbody = document.getElementById('stockTableBody');
-  if (!allProducts.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="table-empty"><div class="empty-icon">📭</div><h3>Belum ada data stok</h3></div></td></tr>`; return; }
-  tbody.innerHTML = allProducts.map(p => {
+  if (!allProducts.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="table-empty"><div class="empty-icon">📭</div><h3>Belum ada data stok</h3></div></td></tr>`;
+    return;
+  }
+
+  // Filter Logic
+  let filtered = allProducts;
+  let label = 'Detail Stok Barang';
+  const resetBtn = document.getElementById('btnResetStockFilter');
+  const titleEl = document.getElementById('stockTableTitle');
+
+  if (currentStockFilter === 'adequate') {
+    filtered = allProducts.filter(p => (p.stock || 0) > 10);
+    label = 'Detail Stok Barang: Stok Cukup';
+    if (resetBtn) resetBtn.style.display = 'block';
+  } else if (currentStockFilter === 'low') {
+    filtered = allProducts.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= 10);
+    label = 'Detail Stok Barang: Stok Rendah';
+    if (resetBtn) resetBtn.style.display = 'block';
+  } else if (currentStockFilter === 'empty') {
+    filtered = allProducts.filter(p => (p.stock || 0) <= 0);
+    label = 'Detail Stok Barang: Habis';
+    if (resetBtn) resetBtn.style.display = 'block';
+  } else {
+    if (resetBtn) resetBtn.style.display = 'none';
+  }
+
+  if (titleEl) titleEl.textContent = `📦 ${label}`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="table-empty"><div class="empty-icon">📭</div><h3>Tidak ada produk untuk kategori ini</h3></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(p => {
     const s = getStockStatus(p.stock);
     return `<tr><td><div class="product-info"><div class="product-thumb">${getCategoryEmoji(p.category)}</div><div><div class="product-name">${escapeHtml(p.name)}</div></div></div></td>
-      <td>${escapeHtml(p.sku)}</td><td>${p.stock}</td><td>${escapeHtml(p.unit || 'pcs')}</td><td class="price-text">${formatRupiah(p.price * p.stock)}</td>
+      <td>${escapeHtml(p.sku)}</td><td>${p.stock}</td><td>${escapeHtml(p.unit || 'pcs')}</td><td class="price-text">${formatRupiah((p.price || 0) * (p.stock || 0))}</td>
       <td><span class="badge ${s.class}">${s.label}</span></td></tr>`;
   }).join('');
 }
@@ -343,10 +385,10 @@ function renderSalesOrders() {
     const sColor = d.status === 'completed' ? 'success' : (d.status === 'processing' ? 'info' : 'warning');
     const sLabel = d.status === 'completed' ? 'Selesai' : (d.status === 'processing' ? 'Diproses' : 'Pending');
     const itemsStr = d.items && d.items.length ? escapeHtml(`${d.items[0].productName} x${d.items[0].qty}`) : '-';
-    
+
     // Disable edit for completed
-    const editBtn = d.status !== 'completed' 
-      ? `<button class="btn-icon edit" onclick="openEditStatusModal('${d.id}', '${d.status}')" title="Ubah Status">✏️</button>` 
+    const editBtn = d.status !== 'completed'
+      ? `<button class="btn-icon edit" onclick="openEditStatusModal('${d.id}', '${d.status}')" title="Ubah Status">✏️</button>`
       : '';
 
     return `<tr><td><span style="font-weight:600">${escapeHtml(d.orderNumber)}</span></td><td>${itemsStr}</td><td>${date}</td>
@@ -357,11 +399,11 @@ function renderSalesOrders() {
 
 function renderInvoices() {
   const tbody = document.getElementById('invoicesBody');
-  
+
   let paidCount = 0;
   let unpaidCount = 0;
   let totalInvoiceValue = 0;
-  
+
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
@@ -443,7 +485,7 @@ function renderPurchaseOrders() {
   const elReceived = document.getElementById('poStatReceived');
   const elShipped = document.getElementById('poStatShipped');
   const elValue = document.getElementById('poStatValue');
-  
+
   if (elTotal) elTotal.textContent = totalPO;
   if (elReceived) elReceived.textContent = received;
   if (elShipped) elShipped.textContent = shipped;
@@ -455,9 +497,9 @@ function renderPurchaseOrders() {
     const date = new Date(d.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
     const sColor = d.status === 'received' ? 'success' : (d.status === 'shipped' ? 'info' : 'warning');
     const sLabel = d.status === 'received' ? 'Diterima' : (d.status === 'shipped' ? 'Dikirim' : 'Menunggu');
-    
-    const editBtn = d.status !== 'received' 
-      ? `<button class="btn-icon edit" onclick="openEditPurchaseStatusModal('${d.id}', '${d.status}')" title="Ubah Status">✏️</button>` 
+
+    const editBtn = d.status !== 'received'
+      ? `<button class="btn-icon edit" onclick="openEditPurchaseStatusModal('${d.id}', '${d.status}')" title="Ubah Status">✏️</button>`
       : '';
 
     return `<tr><td><span style="font-weight:600">${escapeHtml(d.poNumber)}</span></td><td>${escapeHtml(d.supplierName)}</td><td>${date}</td>
@@ -692,7 +734,7 @@ function updateDashboardCharts() {
       catStats[c].stock += (p.stock || 0);
       catStats[c].value += (p.price || 0) * (p.stock || 0);
     });
-    
+
     // Use .stats-grid-like styling for category cards
     catGrid.className = 'stats-grid mt-2';
     catGrid.innerHTML = Object.keys(catStats).map((c, i) => `
@@ -776,8 +818,8 @@ function updateSalesChart() {
       const stockMovement = [];
       let runningVal = currentTotalStockValue;
       for (let i = profitData.length - 1; i >= 0; i--) {
-         stockMovement.unshift(runningVal);
-         runningVal = runningVal + salesData[i] - purchaseData[i]; // Reverse flow
+        stockMovement.unshift(runningVal);
+        runningVal = runningVal + salesData[i] - purchaseData[i]; // Reverse flow
       }
       chartInstances.reportStock.data.labels = labels;
       chartInstances.reportStock.data.datasets[0].data = stockMovement;
@@ -797,9 +839,9 @@ function populateProductDropdown(selectId) {
         dropdownParent: $(`#${selectId}`).closest('.modal'),
         width: '100%',
         placeholder: "Cari produk..."
-      }).on('change', function() {
-        if(selectId === 'salesProduct') calculateSalesTotal();
-        if(selectId === 'purchaseProduct') calculatePurchaseTotal();
+      }).on('change', function () {
+        if (selectId === 'salesProduct') calculateSalesTotal();
+        if (selectId === 'purchaseProduct') calculatePurchaseTotal();
       });
     }
   }
@@ -813,21 +855,21 @@ function calculateSalesTotal() {
   const select = document.getElementById('salesProduct');
   const qtyInput = document.getElementById('salesQty');
   let qty = parseInt(qtyInput.value) || 0;
-  
+
   if (!select.value) { document.getElementById('salesTotal').value = 0; return; }
-  
+
   const selectedOption = select.options[select.selectedIndex];
   const price = parseInt(selectedOption.dataset.price) || 0;
   const maxStock = parseInt(selectedOption.dataset.stock) || 0;
-  
+
   qtyInput.max = maxStock;
-  
+
   if (qty > maxStock) {
     qty = maxStock;
     qtyInput.value = maxStock;
     showToast('Peringatan', 'Jumlah pesanan melebihi stok yang tersedia (' + maxStock + ')', 'warning');
   }
-  
+
   document.getElementById('salesTotal').value = price * qty;
 }
 function calculatePurchaseTotal() {
@@ -856,13 +898,18 @@ function handleSearch(query) {
   if (!document.getElementById('sectionProducts').classList.contains('active')) showSection('products');
 }
 
+function filterStockTable(type) {
+  currentStockFilter = type;
+  renderStockSection();
+}
+
 // ============ MODAL LOGIC (Products, Sales, Purchasing, Users) ============
 
 function openProductModal(product = null) {
   document.getElementById('productForm').reset();
   document.getElementById('productId').value = '';
   document.getElementById('productModalTitle').textContent = product ? 'Edit Produk' : 'Tambah Produk';
-  
+
   if (product) {
     document.getElementById('productId').value = product.id; document.getElementById('productName').value = product.name || '';
     document.getElementById('productSku').value = product.sku || ''; document.getElementById('productCategory').value = product.category || '';
@@ -873,7 +920,7 @@ function openProductModal(product = null) {
     const random12Digit = Math.floor(100000000000 + Math.random() * 900000000000).toString();
     document.getElementById('productSku').value = random12Digit;
   }
-  
+
   document.getElementById('productModal').classList.add('active');
 }
 function closeProductModal() { document.getElementById('productModal').classList.remove('active'); }
@@ -894,11 +941,11 @@ async function handleProductSubmit(e) {
 function openSalesModal() {
   document.getElementById('salesForm').reset(); document.getElementById('salesId').value = '';
   document.getElementById('salesNumber').value = 'SO-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  
+
   populateProductDropdown('salesProduct');
   // Reset select2 value
   if ($.fn.select2) $('#salesProduct').val(null).trigger('change');
-  
+
   document.getElementById('salesModal').classList.add('active');
 }
 function closeSalesModal() { document.getElementById('salesModal').classList.remove('active'); }
@@ -908,10 +955,10 @@ async function handleSalesSubmit(e) {
   const productSelect = document.getElementById('salesProduct');
   const selectedOption = productSelect.options[productSelect.selectedIndex];
   const productId = productSelect.value;
-  
+
   let productName = selectedOption.text.split(' - ')[0];
   productName = productName.replace(/^\[Stok:\s*\d+\]\s*/, '');
-  
+
   const qty = parseInt(document.getElementById('salesQty').value) || 1;
   const maxStock = parseInt(selectedOption.dataset.stock) || 0;
 
@@ -980,10 +1027,10 @@ async function handlePurchaseSubmit(e) {
   e.preventDefault(); const btn = document.getElementById('purchaseSubmitBtn'); btn.disabled = true;
   const productSelect = document.getElementById('purchaseProduct');
   const productId = productSelect.value;
-  
+
   let productName = productSelect.options[productSelect.selectedIndex].text.split(' - ')[0];
   productName = productName.replace(/^\[Stok:\s*\d+\]\s*/, '');
-  
+
   const qty = parseInt(document.getElementById('purchaseQty').value) || 1;
   const status = document.getElementById('purchaseStatus').value;
 
@@ -1029,7 +1076,7 @@ async function handleEditPurchaseStatusSubmit(e) {
 
     const oldStatus = order.status;
     await API.purchases.updateOrder(orderId, { status: newStatus });
-    
+
     // Update local stock via API if status changed
     if (oldStatus !== 'received' && newStatus === 'received') {
       // Products arrived: ADD stock
@@ -1045,8 +1092,8 @@ async function handleEditPurchaseStatusSubmit(e) {
         for (const item of order.items) {
           const p = allProducts.find(x => x.id === item.productId);
           if (p) {
-             const newStock = Math.max(0, p.stock - item.qty);
-             await API.products.update(p.id, { stock: newStock });
+            const newStock = Math.max(0, p.stock - item.qty);
+            await API.products.update(p.id, { stock: newStock });
           }
         }
       }
@@ -1095,12 +1142,12 @@ async function handleDocumentSubmit(e) {
   const btn = document.getElementById('documentSubmitBtn');
   const fileInput = document.getElementById('documentFile');
   const nameInput = document.getElementById('documentNameDisplay');
-  
+
   if (!fileInput.files.length) return;
-  
+
   btn.disabled = true;
   btn.textContent = 'Uploading...';
-  
+
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
   if (nameInput.value.trim()) {
